@@ -3,6 +3,7 @@
 #include "Utility/SimpleConfig.h"
 #include "Utility/StringUtils.h"
 #include "Math/Quaternion.h"
+#include <iostream>
 
 using namespace SLR;
 
@@ -172,7 +173,14 @@ VectorXf QuadEstimatorEKF::PredictState(VectorXf curState, float dt, V3F accel, 
   Quaternion<float> attitude = Quaternion<float>::FromEuler123_RPY(rollEst, pitchEst, curState(6));
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
-
+  V3F accel_I = attitude.Rotate_BtoI(accel);
+  predictedState(0) = curState(0) + curState(3) * dt; //update global x
+  predictedState(1) = curState(1) + curState(4) * dt; //update global y
+  predictedState(2) = curState(2) + curState(5) * dt; //update global z
+  predictedState(3) = curState(3) + accel_I.x * dt; //update global x_dot
+  predictedState(4) = curState(4) + accel_I.y * dt; //update global y_dot
+  predictedState(5) = curState(5) + accel_I.z * dt; //update global z_dot
+  //predictedState(6) is done by IMU update
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
@@ -199,6 +207,15 @@ MatrixXf QuadEstimatorEKF::GetRbgPrime(float roll, float pitch, float yaw)
   //   that your calculations are reasonable
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
+  float sin_theta = sin(roll);
+  float cos_theta = cos(roll);
+  float sin_phi = sin(pitch);
+  float cos_phi = cos(pitch);
+  float sin_psi = sin(yaw);
+  float cos_psi = cos(yaw);
+  RbgPrime << -cos_theta*sin_psi, -sin_phi*sin_theta*sin_psi - cos_theta*cos_psi, -cos_phi*sin_theta*sin_psi + sin_phi*cos_psi,
+          cos_theta*cos_psi, sin_phi * sin_theta * cos_psi - cos_phi*sin_psi, cos_phi*sin_theta*cos_psi + sin_phi*sin_psi,
+          0,0,0;
 
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
@@ -245,7 +262,17 @@ void QuadEstimatorEKF::Predict(float dt, V3F accel, V3F gyro)
   gPrime.setIdentity();
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
+  VectorXf ut(3);
+  ut <<accel.x,accel.y,accel.z;
+  VectorXf g_Partial = RbgPrime *ut * dt;
+  gPrime(0,3) = dt;
+  gPrime(1,4) = dt;
+  gPrime(2,5) = dt;
+  gPrime(3,6) = g_Partial(0);
+  gPrime(4,6) = g_Partial(1);
+  gPrime(5,6) = g_Partial(2);
 
+  ekfCov = gPrime * ekfCov * gPrime.transpose() + Q;
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
