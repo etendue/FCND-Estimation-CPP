@@ -73,8 +73,8 @@ VehicleCommand QuadControl::GenerateMotorCommands(float collThrustCmd, V3F momen
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
 
   float c_cmd = collThrustCmd;
-  float p_cmd = momentCmd[0]/L;
-  float q_cmd = momentCmd[1]/L;
+  float p_cmd = momentCmd[0]/(0.7071*L);
+  float q_cmd = momentCmd[1]/(0.7071*L);
   float r_cmd = momentCmd[2]/kappa;
 
   cmd.desiredThrustsN[0] = (c_cmd + p_cmd + q_cmd - r_cmd)/4.f; // front left
@@ -248,7 +248,12 @@ float QuadControl::YawControl(float yawCmd, float yaw)
 
   float yawRateCmd=0;
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
-  yawRateCmd = kpYaw *( fmod(yawCmd - yaw,2*M_PI));
+  float yawError = yawCmd - yaw;
+  yawError = fmod(yawError,2*M_PI);
+  if (yawError < -M_PI) yawError +=2 * M_PI;
+  if (yawError > M_PI) yawError -=2 * M_PI;
+
+  yawRateCmd = kpYaw *yawError;
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
